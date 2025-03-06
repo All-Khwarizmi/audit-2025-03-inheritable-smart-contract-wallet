@@ -1,6 +1,6 @@
 # InheritableSmartContractWallet
 
-[//]: # "contest-details-open"
+[//]: # (contest-details-open)
 
 - Starts: March 06, 2025 Noon UTC
 - Ends: March, 13, 2025 Noon UTC
@@ -63,8 +63,8 @@ Actors:
 5. We allow external contract interaction via `call{}()`. We are aware this can be dangerous, thats why we installed reentrancy guards. Nevertheless, we expect the users
    to validate their inputs beforehand, we do not take responsibility for security breaches using this function.
 
-[//]: # "contest-details-close"
-[//]: # "scope-open"
+[//]: # (contest-details-close)
+[//]: # (scope-open)
 
 ## Scope (contracts)
 
@@ -95,8 +95,8 @@ Compatibilities:
       - No limitations. Inheritance Manager needs to be compatible with ether and every ERC20 token.
 ```
 
-[//]: # "scope-close"
-[//]: # "getting-started-open"
+[//]: # (scope-close)
+[//]: # (getting-started-open)
 
 ## Setup
 
@@ -120,11 +120,11 @@ $ forge test
 $ forge coverage
 ```
 
-[//]: # "getting-started-close"
-[//]: # "known-issues-open"
+[//]: # (getting-started-close)
+[//]: # (known-issues-open)
 
 ## Known Issues
 
 None.
 
-[//]: # "known-issues-close"
+[//]: # (known-issues-close)
