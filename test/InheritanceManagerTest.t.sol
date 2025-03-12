@@ -104,6 +104,14 @@ contract InheritanceManagerTest is Test {
         vm.stopPrank();
     }
 
+    function test_cannotAddDuplicateBeneficiary() public {
+        vm.startPrank(owner);
+        im.addBeneficiery(user1);
+        vm.expectRevert();
+        im.addBeneficiery(user1);
+        vm.stopPrank();
+    }
+
     function test_removeBeneficiary() public {
         address user2 = makeAddr("user2");
         vm.startPrank(owner);
@@ -116,6 +124,45 @@ contract InheritanceManagerTest is Test {
         im.removeBeneficiary(user2);
         vm.stopPrank();
         assert(1 != im._getBeneficiaryIndex(user2));
+    }
+
+    function test_removeBeneficiaryII() public {
+        address user2 = makeAddr("user2");
+        address user3 = makeAddr("user3");
+        address inexistentUser = makeAddr("inexistentUser");
+
+        vm.startPrank(owner);
+        im.addBeneficiery(user1);
+        im.addBeneficiery(user2);
+        im.addBeneficiery(user3);
+        vm.stopPrank();
+        assertEq(0, im._getBeneficiaryIndex(user1));
+        assertEq(1, im._getBeneficiaryIndex(user2));
+        assertEq(2, im._getBeneficiaryIndex(user3));
+        vm.startPrank(owner);
+        im.removeBeneficiary(user2);
+        im.removeBeneficiary(inexistentUser);
+
+        vm.stopPrank();
+        console.log(" index0", im.getBeneficiary(0));
+        console.log(" index1", im.getBeneficiary(1));
+        console.log(" index2", im.getBeneficiary(2));
+        assert(1 != im._getBeneficiaryIndex(user2));
+    }
+
+    function test_removeFirstBeneficiaryByPassingInexistentIndex() public {
+        address user2 = makeAddr("user2");
+        address inexistentUser = makeAddr("inexistentUser");
+        vm.startPrank(owner);
+        im.addBeneficiery(user1);
+        im.addBeneficiery(user2);
+        assertEq(user1, im.getBeneficiary(0));
+        assertEq(user2, im.getBeneficiary(1));
+
+        im.removeBeneficiary(inexistentUser);
+        vm.stopPrank();
+
+        assert(user1 != im.getBeneficiary(0));
     }
 
     function test_inheritBeforeDeadline() public {
@@ -196,6 +243,28 @@ contract InheritanceManagerTest is Test {
         assertEq(3e18, user1.balance);
         assertEq(3e18, user2.balance);
         assertEq(3e18, user3.balance);
+    }
+
+    function test_withdrawInheritedFundsEtherDuplicateBeneficiary() public {
+        address user2 = makeAddr("user2");
+        address user3 = makeAddr("user3");
+        vm.startPrank(owner);
+        im.addBeneficiery(user1);
+        im.addBeneficiery(user1);
+        im.addBeneficiery(user2);
+        im.addBeneficiery(user3);
+        vm.stopPrank();
+        vm.warp(1);
+        vm.deal(address(im), 9e18);
+        vm.warp(1 + 90 days);
+        vm.startPrank(user1);
+        im.inherit();
+        im.withdrawInheritedFunds(address(0));
+        vm.stopPrank();
+        uint256 proportion = 9e18 / 4;
+        assertEq(proportion * 2, user1.balance);
+        assertEq(proportion, user2.balance);
+        assertEq(proportion, user3.balance);
     }
 
     function test_withdrawInheritedFundsERC20Success() public {

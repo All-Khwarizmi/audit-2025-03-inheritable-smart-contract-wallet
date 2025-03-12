@@ -68,6 +68,7 @@ contract InheritanceManager is Trustee {
     modifier nonReentrant() {
         assembly {
             if tload(1) { revert(0, 0) }
+            // @audit-info : Transient storage as defined by EIP-1153 can break the composability of smart contracts:
             tstore(0, 1)
         }
         _;
@@ -127,6 +128,7 @@ contract InheritanceManager is Trustee {
         if (_storeTarget) {
             interactions[_target] = data;
         }
+        // @audit-issue : BREAK = Core Assumptions and Invariants 1. EVERY transaction the owner does with this contract must reset the 90 days timer
     }
 
     //////////////////////////////////////////////////////////////////////////////////
@@ -143,7 +145,9 @@ contract InheritanceManager is Trustee {
     function createEstateNFT(string memory _description, uint256 _value, address _asset) external onlyOwner {
         uint256 nftID = nft.createEstate(_description);
         nftValue[nftID] = _value;
+        // @audit : question - do not understand this
         assetToPay = _asset;
+        // @audit : question - should we set deadline here?
     }
 
     /**
@@ -151,6 +155,7 @@ contract InheritanceManager is Trustee {
      * @param _beneficiary beneficiary address
      */
     function addBeneficiery(address _beneficiary) external onlyOwner {
+        // @audit-issue : we do not check if the beneficiary is already in the array. Thus it is possible to add the same address multiple times and have duplicates.
         beneficiaries.push(_beneficiary);
         _setDeadline();
     }
@@ -161,6 +166,10 @@ contract InheritanceManager is Trustee {
      * @param _beneficiary address to be removed from the array beneficiaries
      */
     function removeBeneficiary(address _beneficiary) external onlyOwner {
+        //@audit-issue : passing in an inexistent address will not revert, but will remove the first element in the array. Thus removing the first beneficiary silently. In deed the user has no way to notice this.
+        // Mitigation:
+        // 1. check if the address is in the array, if not, revert
+        // 2. Add a getter to check if a beneficiary is in the array or/and the length of the array
         uint256 indexToRemove = _getBeneficiaryIndex(_beneficiary);
         delete beneficiaries[indexToRemove];
     }
@@ -182,12 +191,17 @@ contract InheritanceManager is Trustee {
      * @param _beneficiary address to fetch the index for
      */
     function _getBeneficiaryIndex(address _beneficiary) public view returns (uint256 _index) {
+        // @audit : gas-optimization - we can save gas by storing the length of the array and the array itself in a variable and then using that variable in the loop
         for (uint256 i = 0; i < beneficiaries.length; i++) {
             if (_beneficiary == beneficiaries[i]) {
                 _index = i;
                 break;
             }
         }
+    }
+
+    function getBeneficiary(uint256 _index) public view returns (address) {
+        return beneficiaries[_index];
     }
 
     function getDeadline() public view returns (uint256) {
@@ -265,7 +279,7 @@ contract InheritanceManager is Trustee {
         uint256 divisor = beneficiaries.length;
         uint256 multiplier = beneficiaries.length - 1;
         uint256 finalAmount = (value / divisor) * multiplier;
-        IERC20(assetToPay).safeTransferFrom(msg.sender, address(this), finalAmount);
+        IERC20(assetToPay).safeTransferFrom(msg.sender, address(this), finalAmount); // @audit-issue ? : should divide by divisor here? like below
         for (uint256 i = 0; i < beneficiaries.length; i++) {
             if (msg.sender == beneficiaries[i]) {
                 return;
